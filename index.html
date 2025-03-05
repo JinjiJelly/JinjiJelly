@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>嗯？这是什么？</title>
+    <style>
+        body { 
+            text-align: center; 
+            font-family:"KaiTi", cursive ;
+            background: linear-gradient(to bottom, #e0f7fa, #2c2c2c);
+            transition: background 1s ease;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+    font-size: 60px;  
+    font-family: "Microsoft YaHei", sans-serif;  
+    color: #003366; 
+    font-weight: bold; 
+        }
+        h1 + p {
+    font-size: 50px;
+    color: #003247;
+        }
+
+        #puzzle-container { 
+            display: grid; 
+            grid-template-columns: repeat(5, 100px); 
+            grid-template-rows: repeat(5, 100px); 
+            gap: 5px; 
+            margin: 20px auto; 
+            width: 630px; 
+            height: 630px;
+            position: relative; 
+        }
+        .puzzle-piece { 
+            width: 100px; 
+            height: 100px; 
+            cursor: grab; 
+            border: 1px solid #ccc; 
+            background-size: 600px 600px; 
+            position: absolute; 
+            user-select: none;
+            transition: left 0.3s ease, top 0.3s ease;
+        }
+        #message { 
+            display: none; 
+            font-size: 18px; 
+            color: #f00; 
+            margin-top: 10px; 
+        }
+        #blessing { 
+            display: none; 
+            font-family: Georgia, serif; 
+            font-size: 30px; 
+            color:#473417;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+            animation: glow 1s ease-in-out infinite alternate;
+            margin: 30px auto;
+            max-width: 1000px;
+        }
+ 
+        @keyframes glow {
+            from {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+        }
+        
+        .text-rain {
+            position: fixed;
+            top: -20px;
+            color: #ae675c;
+            font-size: 30px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: fall 3s linear;
+        }
+        
+        @keyframes fall {
+            to {
+                top: 100vh;
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>你得到了一张藏宝图！</h1>
+    <p><b>赶快来复原藏宝图！看看会获得什么！</b></p>
+    <div id="puzzle-container"></div>
+    <p id="message">还没完成哦，再试试！</p>
+    <p id="blessing"><i><b>恭喜！贺喜！逻辑Lawgitech半周年快乐！感谢你的每一场直播，感谢你的所有陪伴！愿你所得皆所愿，我们来日方长，前路继续相伴而行！Your dedication and passion light up our world. Our favorite dragon, we cherish you deeply! No matter where the journey leads, we’ll stand by your side, always.</b></i></p>
+
+    <script>
+        const imageURL = 'https://i.imgur.com/ftg65Ng.jpg';
+        const gridSize = 6;
+        const tileSize = 100;
+        const container = document.getElementById('puzzle-container');
+        let pieces = [];
+        let draggingPiece = null;
+        let originalIndex = null;
+        
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function createPuzzle() {
+            pieces = [];
+            container.innerHTML = '';
+            let indices = [...Array(gridSize * gridSize).keys()];
+            shuffleArray(indices);
+            
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                let div = document.createElement('div');
+                div.className = 'puzzle-piece';
+                div.style.backgroundImage = `url(${imageURL})`;
+                div.style.backgroundPosition = `${-(indices[i] % gridSize) * tileSize}px ${-(Math.floor(indices[i] / gridSize) * tileSize)}px`;
+                div.style.left = `${(i % gridSize) * tileSize}px`;
+                div.style.top = `${Math.floor(i / gridSize) * tileSize}px`;
+                div.setAttribute('data-index', i);
+                div.setAttribute('original-index', indices[i]);
+
+                div.addEventListener('mousedown', startDrag);
+                document.addEventListener('mouseup', dropPiece);
+                
+                pieces.push(div);
+                container.appendChild(div);
+            }
+        }
+
+        // 新增文字雨效果
+        function createTextRain() {
+            const characters = ['小', '龙', '们', '爱', '你', '！'];
+            for (let i = 0; i < 50; i++) {
+                const span = document.createElement('span');
+                span.className = 'text-rain';
+                span.style.left = `${Math.random() * 100}%`;
+                span.style.animationDelay = `${Math.random() * 2}s`;
+                span.textContent = characters[Math.floor(Math.random() * characters.length)];
+                document.body.appendChild(span);
+            }
+            
+            setTimeout(() => {
+                document.querySelectorAll('.text-rain').forEach(e => e.remove());
+            }, 5000);
+        }
+
+        function startDrag(event) {
+            draggingPiece = event.target;
+            originalIndex = parseInt(draggingPiece.getAttribute('data-index'));
+        }
+
+        function dropPiece(event) {
+            if (!draggingPiece) return;
+            let target = document.elementFromPoint(event.clientX, event.clientY);
+            if (target && target.classList.contains('puzzle-piece') && target !== draggingPiece) {
+                let targetIndex = parseInt(target.getAttribute('data-index'));
+                
+                let tempLeft = draggingPiece.style.left;
+                let tempTop = draggingPiece.style.top;
+                
+                draggingPiece.style.left = target.style.left;
+                draggingPiece.style.top = target.style.top;
+                draggingPiece.setAttribute('data-index', targetIndex);
+                
+                target.style.left = tempLeft;
+                target.style.top = tempTop;
+                target.setAttribute('data-index', originalIndex);
+                
+                checkCompletion();
+            }
+            draggingPiece = null;
+        }
+
+        function isWhiteTile(piece) {
+            return new Promise(resolve => {
+                let canvas = document.createElement("canvas");
+                let ctx = canvas.getContext("2d");
+                canvas.width = tileSize;
+                canvas.height = tileSize;
+                
+                let img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.src = imageURL;
+
+                img.onload = function () {
+                    ctx.drawImage(img, 
+                        -(parseInt(piece.getAttribute('original-index')) % gridSize) * tileSize, 
+                        -(Math.floor(parseInt(piece.getAttribute('original-index')) / gridSize)) * tileSize,
+                        gridSize * tileSize, gridSize * tileSize
+                    );
+                    
+                    let imageData = ctx.getImageData(0, 0, tileSize, tileSize).data;
+                    let isWhite = true;
+                    
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        let r = imageData[i];
+                        let g = imageData[i + 1];
+                        let b = imageData[i + 2];
+
+                        if (!(r > 240 && g > 240 && b > 240)) {
+                            isWhite = false;
+                            break;
+                        }
+                    }
+                    resolve(isWhite);
+                };
+            });
+        }
+
+        async function checkCompletion() {
+            let completed = true;
+
+            for (let piece of pieces) {
+                let correctIndex = parseInt(piece.getAttribute('original-index'));
+                let currentIndex = parseInt(piece.getAttribute('data-index'));
+
+                let isWhite = await isWhiteTile(piece);
+                if (!isWhite && currentIndex !== correctIndex) {
+                    completed = false;
+                    break;
+                }
+            }
+
+            if (completed) {
+                // 触发特效
+                document.getElementById('blessing').style.display = 'block';
+                document.body.style.background = 'linear-gradient(to bottom, #FFB6C1, #FFA500)';
+                createTextRain();
+                
+                // 添加祝福语动画
+                const blessing = document.getElementById('blessing');
+                blessing.style.animation = 'glow 1s ease-in-out infinite alternate';
+            }
+        }
+        
+        createPuzzle();
+    </script>
+</body>
+</html>
